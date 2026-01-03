@@ -1,52 +1,54 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 
-// Base config for NestJS app (without migrations)
-let appConfig: DataSourceOptions = {
+let dbConfig: DataSourceOptions = {
   type: 'sqlite',
   synchronize: false,
   database: 'db.sqlite',
   entities: [],
-};
-
-// Config for TypeORM CLI (with migrations)
-let cliConfig: DataSourceOptions = {
-  type: 'sqlite',
-  synchronize: false,
-  database: 'db.sqlite',
-  migrations: ['src/migrations/*.ts'],
-  entities: [],
+  migrations: [],
+  migrationsRun: false, // Set to true if you want auto-run on app start
 };
 
 switch (process.env.NODE_ENV) {
   case 'development':
-    Object.assign(appConfig, {
+    Object.assign(dbConfig, {
       database: 'db.sqlite',
-      entities: ['**/*.entity.js'],
-    });
-    Object.assign(cliConfig, {
-      database: 'db.sqlite',
-      entities: ['src/**/*.entity.ts'],
+      entities: ['dist/**/*.entity.js'],
+      migrations: ['dist/src/migrations/*.js'], // Runtime uses compiled JS
     });
     break;
   case 'test':
-    Object.assign(appConfig, {
+    Object.assign(dbConfig, {
       database: 'test-db.sqlite',
       entities: ['**/*.entity.ts'],
-    });
-    Object.assign(cliConfig, {
-      database: 'test-db.sqlite',
-      entities: ['src/**/*.entity.ts'],
+      migrations: ['src/migrations/*.ts'], // Test can use TS directly
+      migrationsRun: true, // Auto-run migrations in production
     });
     break;
   case 'production':
-    // Add production config here
+    Object.assign(dbConfig, {
+      type: 'postgres',
+      url: process.env.DATABASE_URL,
+      migrationsRun: true, // Auto-run migrations in production
+      entities: ['dist/**/*.entity.js'],
+      migrations: ['dist/src/migrations/*.js'],
+      ssl: {
+        rejectUnauthorized: false,
+      },
+    });
     break;
   default:
     throw new Error('unknown environment');
 }
 
-// Export config for NestJS app (NO migrations - they're already applied)
-export const config = appConfig;
+// Export config for NestJS app
+export const config = dbConfig;
 
-// Export DataSource for TypeORM CLI (WITH migrations)
+// Export DataSource for TypeORM CLI (uses TS source files)
+const cliConfig: DataSourceOptions = {
+  ...dbConfig,
+  entities: ['src/**/*.entity.ts'],
+  migrations: ['src/migrations/*.ts'],
+};
+
 export default new DataSource(cliConfig);
