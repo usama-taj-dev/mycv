@@ -3,7 +3,7 @@ import { join } from 'path';
 
 global.beforeEach(async () => {
   try {
-    await rm(join(__dirname, '..', 'test.sqlite'));
+    await rm(join(__dirname, '..', 'test-db.sqlite'));
   } catch (err) {
     console.log(err);
   }
